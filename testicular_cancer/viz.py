@@ -7,6 +7,7 @@ import cv2
 import uuid
 import pandas as pd
 import plotly.express as px
+
 from config import DEST,\
                 DICOM_PATH,\
                 MASK_DICOM_PATH,\
@@ -27,18 +28,22 @@ list_all_dicom_files,\
 list_all_mask_dicom_files,\
 list_all_patients = init_data_viz()
 
+
 # save 1 patch (information from st.widgets)
 def save_patch(dicom_id, im):
     """
+    saves path to disk with a .jpg extension.
+    does not keep original data range
     """
     offset = str(anterior_position) + "_" + str(left_max_window)
     random_id = str(uuid.uuid4())
     plt.imsave(os.path.join(DEST,f"{offset}_{dicom_id}_{random_id}.jpg"),
                 im)
 
-# save multiple patches dans un fichier csv
+# save multiple patches coordinates dans un fichier csv
 def save_patches(dicom_id,cust_labels):
     """
+    saves patch coordinates (y0,y1,x0,x1) in a csv file with the dicom_id = patient id + slice info
     """
     df = pd.DataFrame(cust_labels).transpose()
     df.to_csv(os.path.join(DEST, f"{dicom_id}.csv"), 
@@ -48,10 +53,42 @@ def save_patches(dicom_id,cust_labels):
 # create empty lines
 def create_space(n=3):
     """
+    creates k empty lines in a streamlit viz
     """
     for k in range(n):
         st.header("")
 
+# transforms dicom info into images ( images + mask and returns the center of the tumour mass(es)
+def process_images_masks(file_image_name, file_mask_name):
+
+	
+    mask_pixel_array = read_dicom.create_dataset(file_mask_name).pixel_array
+    viz_mask_array = mask_pixel_array.astype(np.uint8)
+
+    viz_mask_array_x = np.sum(viz_mask_array, axis=1)
+    viz_mask_array_y = np.sum(viz_mask_arr, axis=0)
+    x_center_mask = np.mean(np.argwhere(viz_mask_array_x>1))
+    y_center_mask = np.mean(np.argwhere(viz_mask_array_y>1))
+
+    if debug :
+        print(x_center_mask,y_center_mask)
+
+    viz_mask_array = mask_pixel_array.astype(float)
+
+    pixel_array = read_dicom.create_dataset(file_image_name).pixel_array
+
+
+    viz_mask_array = cv2.merge([viz_mask_array,
+				    np.zeros_like(viz_mask_array),
+				    np.zeros_like(viz_mask_array)])*255
+    viz_central_array = cv2.merge([pixel_array.astype(np.uint8),
+				    pixel_array.astype(np.uint8),
+				    pixel_array.astype(np.uint8)])
+
+    return viz_central_array,viz_mask_array,pixel_array, x_center_mask, y_center_mask
+
+	
+	
 # create layout
 far_left_pane,left_pane,right_pane,far_right_pane = st.columns([4,4,2,2])
 
@@ -82,6 +119,7 @@ with left_pane:
     st.header("CT-scan abdominal image")
     st.header("")
     # looks for pathologic path first
+    # based on the exception, will check if the dicom is in the non pathological path
     try:
         
         f_image_name = os.path.join(DICOM_PATH ,"Patho", dcm)
@@ -98,31 +136,15 @@ with left_pane:
         
         assert os.path.exists(f_mask_name)
 
-        mask_pixel_arr = read_dicom.create_dataset(f_mask_name).pixel_array
-        viz_mask_arr = mask_pixel_arr.astype(np.uint8)
-
-        viz_mask_arr_x = np.sum(viz_mask_arr, axis=1)
-        viz_mask_arr_y = np.sum(viz_mask_arr, axis=0)
-        x_res_mask = np.mean(np.argwhere(viz_mask_arr_x>1))
-        y_res_mask = np.mean(np.argwhere(viz_mask_arr_y>1))
-   
-        print(x_res_mask,y_res_mask)
-        viz_mask_arr = mask_pixel_arr.astype(float)
-
-        pixel_arr = read_dicom.create_dataset(f_image_name).pixel_array
-
-
-        viz_mask_arr = cv2.merge([viz_mask_arr,
-                                    np.zeros_like(viz_mask_arr),
-                                    np.zeros_like(viz_mask_arr)])*255
-        viz_central_arr = cv2.merge([pixel_arr.astype(np.uint8),
-                                    pixel_arr.astype(np.uint8),
-                                    pixel_arr.astype(np.uint8)])
+	
+	viz_central_arr,viz_mask_arr,pixel_arr, x_res_mask, y_res_mask = process_images_masks(f_image_name,f_mask_name)
+	
 
     # in case the subfolder is not patho:
     except AssertionError as e:
         print(e)
         f_image_name = os.path.join(DICOM_PATH ,"Non patho", dcm)
+	
         print(f_image_name)
         assert os.path.exists(f_image_name)
 
@@ -132,28 +154,7 @@ with left_pane:
 
         f_mask_name = os.path.join(MASK_DICOM_PATH ,"Non Patho", subset_masks[idx])
         
-
-        pixel_arr = read_dicom.create_dataset(f_image_name).pixel_array
-        viz_central_arr = cv2.merge([pixel_arr.astype(np.uint8),
-                                    pixel_arr.astype(np.uint8),
-                                    pixel_arr.astype(np.uint8)])
-
-        mask_pixel_arr = read_dicom.create_dataset(f_mask_name).pixel_array
-        viz_mask_arr = mask_pixel_arr.astype(float)
-
-        viz_mask_arr_x = np.sum(viz_mask_arr, axis=1)
-        viz_mask_arr_y = np.sum(viz_mask_arr, axis=0)
-        x_res_mask = np.mean(np.argwhere(viz_mask_arr_x>1))
-        y_res_mask = np.mean(np.argwhere(viz_mask_arr_y>1))
-
-        viz_mask_arr = cv2.merge([viz_mask_arr,
-                                    np.zeros_like(viz_mask_arr),
-                                    np.zeros_like(viz_mask_arr)])*255
-        pixel_arr = read_dicom.create_dataset(f_image_name).pixel_array
-        viz_central_arr = cv2.merge([pixel_arr.astype(np.uint8),
-                                    pixel_arr.astype(np.uint8),
-                                    pixel_arr.astype(np.uint8)])
-
+	viz_central_arr,viz_mask_arr,pixel_arr, x_res_mask, y_res_mask = process_images_masks(f_image_name,f_mask_name)
 
     # in case there is no pixeldata/pixel_array:
     except Exception as e:
@@ -253,7 +254,7 @@ with far_right_pane:
         use_column_width = True,
         caption = "abdominal area")
 
-        image_list= [viz_spine_arr_b_left,viz_spine_arr_b_right]
+        image_list= [viz_spine_arr_b_left, viz_spine_arr_b_right]
     except:
         pass
 
