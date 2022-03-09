@@ -33,15 +33,16 @@ def init_data_viz():
 
 def filter_dicom_images_patient_id(list_dicom_files, dcm_id):
     """
-
+    returns the files pertaining to a given ID
+    works with masks & images 
     """
     # original filenamees (TODO: reorganize the image data )
     res = [fi for fi in list_dicom_files if fi.split("_")[-1].split("-")[0] in [dcm_id] ]
     return sorted(res)
 
-def sort_suffix(x):
+def int_suffix(x):
     """
-
+    extracts the file's suffix & convert it to integer
     """
     # original filenames (TODO: get the patient id from current filename)
     # the int allows to convert the suffix & sort ascendingly
@@ -54,7 +55,7 @@ def filter_dicom_mask_patient_id(list_dicom_files, dcm_id):
     # original filenames (TODO: reorganize the mask data )
     res = [fi for fi in list_dicom_files if fi.split("_")[1] in [dcm_id] ]
     # employee ID formatted with "Corresponding id _..."
-    return sorted([fi for fi in res if os.path.basename(fi).split("_mask_")[0] == f"Corresponding id _{dcm_id}"] ,key= sort_suffix)
+    return sorted([fi for fi in res if os.path.basename(fi).split("_mask_")[0] == f"Corresponding id _{dcm_id}"] ,key= int_suffix)
 
 def safe_read_dicom(x):
     """
