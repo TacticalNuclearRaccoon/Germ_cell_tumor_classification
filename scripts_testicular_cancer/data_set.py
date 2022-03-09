@@ -67,8 +67,8 @@ def plot_history(history):
   '''
     quick plot of the loss curves (train+validation)
   '''
-  assert "accuracy" in history.history.keys()
-  assert "val_accuracy" in history.history.keys()
+  assert "accuracy" in history.history.keys(), "please monitor the accuracy (training set) in the training script"
+  assert "val_accuracy" in history.history.keys(), "please monitor the accuracy (validation) in the training script"
 
   plt.title("loss curves")
   plt.plot(history.history["accuracy"])
