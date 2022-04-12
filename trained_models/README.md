@@ -1,6 +1,7 @@
 # Model placement
 
 **S3 bucket** : (upcoming (network error to fix :/ )
+<br>
 **gdrive** : https://drive.google.com/drive/folders/1psq57IWiD-I5YvQu5uT06JZgDVrfwWiH?usp=sharing
 
 ## Segmentation:
